@@ -16,7 +16,6 @@ header('Content-Type: application/json');
 
 // Connect to MongoDB and select the database
 // Note: Use proper authentication and error handling in a real-world application
-/** @var MongoDB\Client $mongo */
 $mongo = new MongoDB\Client($connectionString);
 $db = $mongo->selectDatabase($dbName);
 

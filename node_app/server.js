@@ -4,14 +4,21 @@ const http = require('http');
 const socketIo = require('socket.io');
 const routes = require('./routes');
 const axios = require('axios');
-
+const cors = require('cors');
+require('dotenv').config();
 
 // Initialize the express app and http server
 const app = express();
 const server = http.createServer(app);
 
+app.use(cors({ origin: '*' }));
 // Initialize Socket.IO
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Middlewares
 app.use(express.json());
@@ -41,7 +48,7 @@ io.on('connection', (socket) => {
         console.log('Message received:', message);
 
         // Send the message to the PHP backend for processing
-        axios.post('http://localhost/php_app/api/processMessage.php', {
+        axios.post('http://localhost:8888/api/processMessage.php', {
             message: message
         })
             .then(response => {
