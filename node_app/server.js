@@ -5,14 +5,39 @@ const socketIo = require('socket.io');
 const routes = require('./routes');
 const axios = require('axios');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require("express-rate-limit");
+const { body, validationResult } = require('express-validator');
+
 require('dotenv').config();
 
 // Initialize the express app and http server
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors({ origin: '*' }));
-// Initialize Socket.IO
+// Set up a white list and check against it:
+var whitelist = process.env.CORS_WHITELIST.split(',');
+var corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true)
+        } else {
+            callback(new Error('Not allowed by CORS'))
+        }
+    }
+}
+
+// Then pass them to cors:
+app.use(cors(corsOptions));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
+
+// Apply to all requests
+app.use(limiter);
+
 const io = socketIo(server, {
     cors: {
         origin: "*",
@@ -23,6 +48,7 @@ const io = socketIo(server, {
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
 
 // Routes
 app.use(routes);
@@ -35,20 +61,18 @@ io.on('connection', (socket) => {
     socket.on('sendMessage', (message) => {
         console.log('Message received:', message);
 
-        // Here we will later emit an event to send the message to the PHP server for processing
-
-        // Temporary response back to the client
-        socket.emit('messageReceived', {
-            status: 'success',
-            message: 'Message received and processed.'
-        });
-    });
-
-    socket.on('sendMessage', (message) => {
-        console.log('Message received:', message);
+        // Validate the message
+        const errors = validationResult(message);
+        if (!errors.isEmpty()) {
+            return socket.emit('messageReceived', {
+                status: 'error',
+                message: 'Validation failed',
+                errors: errors.array()
+            });
+        }
 
         // Send the message to the PHP backend for processing
-        axios.post('http://localhost:8888/api/processMessage.php', {
+        axios.post(`${process.env.PHP_SERVER_URL}/api/processMessage.php`, {
             message: message
         })
             .then(response => {
@@ -70,7 +94,13 @@ io.on('connection', (socket) => {
     });
 });
 
-
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(err.status || 500).json({
+        status: 'error',
+        message: err.message || 'Internal Server Error',
+    });
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
