@@ -12,8 +12,8 @@ $dbName = $_ENV['DB_NAME'];
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
 
-// Ensure the script only processes POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Ensure the script only processes GET requests
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405); // Method Not Allowed
     echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
     exit;
@@ -25,6 +25,7 @@ try {
     $mongo = new MongoDB\Client($connectionString);
     $db = $mongo->selectDatabase($dbName);
 
+    $collection = $db->selectCollection('messages');
 
     // Fetch all messages
     $messages = $collection->find()->toArray();

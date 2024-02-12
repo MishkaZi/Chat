@@ -29,7 +29,8 @@ try {
     $postData = file_get_contents('php://input');
     $data = json_decode($postData, true);
 
-    $messageId = $data['id'] ?? '';
+
+    $messageId = $data['id']['$oid'];
 
     // Validate input
     if (empty($messageId)) {
@@ -37,6 +38,8 @@ try {
         echo json_encode(['status' => 'error', 'message' => 'Invalid input']);
         exit;
     }
+
+    $collection = $db->selectCollection('messages');
 
     // Delete the message
     $result = $collection->deleteOne(['_id' => new MongoDB\BSON\ObjectId($messageId)]);

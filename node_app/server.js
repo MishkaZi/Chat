@@ -56,37 +56,72 @@ app.use(routes);
 // Socket.IO connection
 io.on('connection', (socket) => {
     console.log('New client connected');
+    // Fetch and emit all messages on new connection
+    axios.get(`${process.env.PHP_SERVER_URL}/api/getMessages.php`)
+        .then(response => {
+            if (response.data.status === 'success') {
+                socket.emit('allMessages', response.data.messages);
+            } else {
+                console.error('Failed to fetch messages');
+            }
+        })
+        .catch(error => console.error('Error fetching messages:', error));
+
+    // Handle edit message
+    socket.on('editMessage', (data) => {
+        axios.post(`${process.env.PHP_SERVER_URL}/api/editMessage.php`, data)
+            .then(response => {
+                if (response.data.status === 'success') {
+                    // Inform all clients about the message update
+                    io.emit('messageUpdated', { id: data.id, newContent: data.newContent });
+                } else {
+                    console.error('Failed to edit message');
+                }
+            })
+            .catch(error => console.error('Error editing message:', error));
+    });
+
+    // Handle delete message
+    socket.on('deleteMessage', (data) => {
+        axios.post(`${process.env.PHP_SERVER_URL}/api/deleteMessage.php`, data)
+            .then(response => {
+                if (response.data.status === 'success') {
+                    // Inform all clients that the message was deleted
+                    io.emit('messageDeleted', { id: data.id });
+                } else {
+                    console.error('Failed to delete message');
+                }
+            })
+            .catch(error => console.error('Error deleting message:', error));
+    });
 
     // Handle messages from client
-    socket.on('sendMessage', (message) => {
-        console.log('Message received:', message);
-
-        // Validate the message
-        const errors = validationResult(message);
-        if (!errors.isEmpty()) {
-            return socket.emit('messageReceived', {
-                status: 'error',
-                message: 'Validation failed',
-                errors: errors.array()
-            });
-        }
-
-        // Send the message to the PHP backend for processing
+    socket.on('sendMessage', (messageText) => {
+        console.log('Message received:', messageText);
+        // Assuming validation passed and message was sent to PHP and saved successfully
         axios.post(`${process.env.PHP_SERVER_URL}/api/processMessage.php`, {
-            message: message
+            message: messageText
         })
-            .then(response => {
-                // Receive the response from PHP and send it back to the client
-                console.log('Message processed by PHP:', response.data);
-                socket.emit('messageReceived', response.data);
-            })
-            .catch(error => {
-                console.error('Error processing message:', error);
+        .then(response => {
+            if (response.data.status === 'success') {
+                // Broadcast the new message to all clients, including the sender
+                io.emit('messageReceived', response.data.message);
+            } else {
+                // Handle error scenario
+                console.error('PHP processing error:', response.data.message);
                 socket.emit('messageReceived', {
                     status: 'error',
                     message: 'Failed to process message.'
                 });
+            }
+        })
+        .catch(error => {
+            console.error('Request error:', error);
+            socket.emit('messageReceived', {
+                status: 'error',
+                message: 'Failed to send message to PHP.'
             });
+        });
     });
 
     socket.on('disconnect', () => {

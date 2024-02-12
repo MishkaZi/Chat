@@ -29,7 +29,7 @@ try {
     $postData = file_get_contents('php://input');
     $data = json_decode($postData, true);
 
-    $messageId = $data['id'] ?? '';
+    $messageId = $data['id']['$oid'];
     $newContent = $data['newContent'] ?? '';
 
     // Validate input
@@ -38,6 +38,8 @@ try {
         echo json_encode(['status' => 'error', 'message' => 'Invalid input']);
         exit;
     }
+
+    $collection = $db->selectCollection('messages');
     
     // Update the message
     $result = $collection->updateOne(
