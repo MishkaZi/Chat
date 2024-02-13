@@ -22,7 +22,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // Connect to MongoDB and select the database
-    // Note: Use proper authentication and error handling in a real-world application
     $mongo = new MongoDB\Client($connectionString);
     $db = $mongo->selectDatabase($dbName);
 
@@ -39,7 +38,7 @@ try {
         exit;
     }
 
-    // Process the message (for example, store it in the database)
+    // Process the message
     $collection = $db->selectCollection('messages');
     $result = $collection->insertOne(['message' => $message]);
 
@@ -48,6 +47,7 @@ try {
         'status' => 'success',
         'message' => 'Message processed and stored in database.'
     ];
+    
 } catch (\Exception $e) {
     // Handle MongoDB specific exceptions (if recognized)
     http_response_code(500);

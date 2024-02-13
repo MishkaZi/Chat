@@ -1,8 +1,6 @@
 // script.js
 document.addEventListener("DOMContentLoaded", () => {
-    // Make sure the port matches your Node.js server port
-    // Use a variable for the server URL for easy configuration and to ensure secure connections in production
-    const serverUrl = 'http://localhost:3333'; // TODO: Change this to use environment configuration or a more secure protocol (wss://) in production
+    const serverUrl = 'http://localhost:3333';
     const socket = io(serverUrl);
     const form = document.getElementById('form');
     const input = document.getElementById('input');
@@ -34,27 +32,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function addMessageToList(message) {
-        
         const item = document.createElement('li');
-        item.setAttribute('data-id', message._id); // Ensure each message has a data-id attribute for identification
+        item.setAttribute('data-id', message._id);
+        item.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start'); // Added classes
 
         const messageText = document.createElement('span');
         messageText.textContent = message.message;
         item.appendChild(messageText);
 
-        // Add Edit button
+        // Create container for buttons (flexbox)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.classList.add('d-flex'); // Flexbox container
+
+        // Edit button
         const editBtn = document.createElement('button');
         editBtn.textContent = 'Edit';
-        editBtn.classList.add('edit-btn');
         editBtn.onclick = () => makeMessageEditable(message._id, messageText);
-        item.appendChild(editBtn);
+        editBtn.classList.add('btn', 'btn-sm', 'btn-warning', 'w-50', 'me-2'); // Added classes
 
-        // Add Delete button
+        // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Delete';
-        deleteBtn.classList.add('delete-btn');
         deleteBtn.onclick = () => deleteMessage(message._id);
-        item.appendChild(deleteBtn);
+        deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger', 'w-50'); // Added classes
+
+        buttonContainer.appendChild(editBtn);
+        buttonContainer.appendChild(deleteBtn);
+        item.appendChild(buttonContainer); // Add buttons to container, then to list item
 
         messages.appendChild(item);
     }
@@ -88,7 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Function to handle message delete
     function deleteMessage(messageId) {
-        
         if (confirm("Are you sure you want to delete this message?")) {
             socket.emit('deleteMessage', { id: messageId });
         }
@@ -110,10 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Handle the error, e.g., display an error message to the user
         } else {
             addMessageToList(message);
-            const item = document.createElement('li');
-            item.textContent = message.message;
-            messages.appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight);
+
         }
     });
 });
